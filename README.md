@@ -136,10 +136,74 @@ pytest tests/ -v
 - [`docs/testing.md`](docs/testing.md) — test strategy and coverage
 - [`docs/deployment.md`](docs/deployment.md) — production deployment guide
 
-## Screenshots
+## 📸 Screenshots
 
-_(Add screenshots of the Dashboard, Issue Details, and Analytics pages here
-before sharing this project externally.)_
+The following screenshots demonstrate the main screens and workflow of the **AI-Powered Operations & Issue Management System for EV Cab Fleets**.
+
+
+
+![Screenshot 1847](screenshots/Screenshot%20%281847%29.png)
+
+![Screenshot 1848](screenshots/Screenshot%20%281848%29.png)
+
+![Screenshot 1849](screenshots/Screenshot%20%281849%29.png)
+
+![Screenshot 1850](screenshots/Screenshot%20%281850%29.png)
+
+![Screenshot 1851](screenshots/Screenshot%20%281851%29.png)
+
+
+
+![Screenshot 1852](screenshots/Screenshot%20%281852%29.png)
+
+![Screenshot 1853](screenshots/Screenshot%20%281853%29.png)
+
+![Screenshot 1854](screenshots/Screenshot%20%281854%29.png)
+
+![Screenshot 1855](screenshots/Screenshot%20%281855%29.png)
+
+![Screenshot 1856](screenshots/Screenshot%20%281856%29.png)
+
+
+
+![Screenshot 1857](screenshots/Screenshot%20%281857%29.png)
+
+![Screenshot 1858](screenshots/Screenshot%20%281858%29.png)
+
+![Screenshot 1859](screenshots/Screenshot%20%281859%29.png)
+
+![Screenshot 1860](screenshots/Screenshot%20%281860%29.png)
+
+![Screenshot 1861](screenshots/Screenshot%20%281861%29.png)
+
+
+
+![Screenshot 1862](screenshots/Screenshot%20%281862%29.png)
+
+![Screenshot 1863](screenshots/Screenshot%20%281863%29.png)
+
+![Screenshot 1864](screenshots/Screenshot%20%281864%29.png)
+
+![Screenshot 1865](screenshots/Screenshot%20%281865%29.png)
+
+
+![Screenshot 1866](screenshots/Screenshot%20%281866%29.png)
+
+![Screenshot 1867](screenshots/Screenshot%20%281867%29.png)
+
+![Screenshot 1868](screenshots/Screenshot%20%281868%29.png)
+
+![Screenshot 1869](screenshots/Screenshot%20%281869%29.png)
+
+
+
+![Screenshot 1870](screenshots/Screenshot%20%281870%29.png)
+
+![Screenshot 1871](screenshots/Screenshot%20%281871%29.png)
+
+![Screenshot 1872](screenshots/Screenshot%20%281872%29.png)
+
+![Screenshot 1873](screenshots/Screenshot%20%281873%29.png)
 
 ## Limitations
 
