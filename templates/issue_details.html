@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Issue Details{% endblock %}
+{% block content %}
+<div id="issue-container">Loading...</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+  requireAuth();
+  const issueId = window.location.pathname.split("/").pop();
+
+  function badge(cls, value) { return `<span class="badge badge-${value}">${value}</span>`; }
+
+  async function loadIssue() {
+    const res = await API.get(`/issues/${issueId}`);
+    const issue = res.data;
+    document.getElementById("issue-container").innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2>#${issue.id} — ${issue.title}</h2>
+        <div>${badge('priority', issue.priority)} ${badge('status', issue.status)}</div>
+      </div>
+      <div class="card">
+        <p><strong>Description:</strong> ${issue.description}</p>
+        <p><strong>Category:</strong> ${issue.category || '—'}</p>
+        <p><strong>Reporter:</strong> ${issue.reporter || '—'}</p>
+        <p><strong>Assigned Team:</strong> ${issue.assigned_team || '—'} &nbsp; <strong>Assigned User:</strong> ${issue.assigned_user || '—'}</p>
+        <p><strong>Vehicle:</strong> ${issue.vehicle || '—'} &nbsp; <strong>Hub:</strong> ${issue.hub || '—'}</p>
+        <p style="color:#6b7280; font-size:12px;">Created ${issue.created_at} · Updated ${issue.updated_at}</p>
+      </div>
+
+      <div class="card">
+        <h3>AI Analysis <span style="font-weight:400; font-size:12px; color:#6b7280;">(suggestions — reviewed by manager)</span></h3>
+        <p><strong>Predicted Category:</strong> ${issue.ai_predicted_category || "Not available"}</p>
+        <p><strong>Predicted Priority:</strong> ${issue.ai_predicted_priority || "Not available"}</p>
+        ${issue.priority_override_reason ? `<p style="color:#6b7280; font-size:13px;"><strong>Override reason:</strong> ${issue.priority_override_reason}</p>` : ""}
+      </div>
+
+      <div class="card">
+        <h3>Operational Impact</h3>
+        <p><strong>Potential Impact:</strong> ${issue.operational_impact ? badge(null, issue.operational_impact) : "Not assessed"}</p>
+        <p style="color:#6b7280; font-size:13px;">${issue.impact_explanation || ""}</p>
+      </div>
+
+      <div class="card">
+        <h3>Potentially Related Issues</h3>
+        ${issue.similar_issues && issue.similar_issues.length
+          ? issue.similar_issues.map(s => `<p><a href="/issues/${s.related_issue_id}">#${s.related_issue_id} ${s.related_issue_title || ""}</a> — ${s.similarity_score}% similar</p>`).join("")
+          : "<p style='color:#9ca3af'>No potentially related issues detected.</p>"}
+      </div>
+
+      <div class="card">
+        <h3>Actions</h3>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <select id="status-select"></select>
+          <button class="btn btn-ghost btn-sm" id="update-status">Update Status</button>
+          <select id="priority-select">
+            ${["Low","Medium","High","Critical"].map(p => `<option ${p===issue.priority?"selected":""}>${p}</option>`).join("")}
+          </select>
+          <button class="btn btn-ghost btn-sm" id="update-priority">Update Priority</button>
+          <button class="btn btn-ghost btn-sm" id="delete-issue" style="color:#e5484d;">Delete Issue</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Comments</h3>
+        <div id="comments-list">
+          ${issue.comments.map(c => `<p><strong>${c.user}:</strong> ${c.comment} <span style="color:#9ca3af;font-size:11px;">(${c.created_at})</span></p>`).join("") || "<p style='color:#9ca3af'>No comments yet.</p>"}
+        </div>
+        <div class="form-group" style="margin-top:10px;">
+          <textarea id="new-comment" rows="2" placeholder="Add a comment..."></textarea>
+        </div>
+        <button class="btn btn-primary btn-sm" id="add-comment">Add Comment</button>
+      </div>
+
+      <div class="card">
+        <h3>History</h3>
+        ${issue.history.map(h => `<p style="font-size:13px;">${h.changed_by} changed <strong>${h.field_changed}</strong> from "${h.old_value}" to "${h.new_value}" — <span style="color:#9ca3af">${h.changed_at}</span></p>`).join("") || "<p style='color:#9ca3af'>No history yet.</p>"}
+      </div>
+    `;
+
+    const TRANSITIONS = {
+      OPEN: ["ASSIGNED", "REJECTED"], ASSIGNED: ["IN_PROGRESS", "OPEN"],
+      IN_PROGRESS: ["RESOLVED", "ASSIGNED"], RESOLVED: ["CLOSED", "IN_PROGRESS"],
+      CLOSED: [], REJECTED: [],
+    };
+    const statusSelect = document.getElementById("status-select");
+    statusSelect.innerHTML = (TRANSITIONS[issue.status] || [])
+      .map(s => `<option value="${s}">${s}</option>`).join("") || "<option disabled>No transitions available</option>";
+
+    document.getElementById("update-status").addEventListener("click", async () => {
+      try {
+        await API.post(`/issues/${issueId}/status`, { status: statusSelect.value });
+        showToast("Status updated");
+        loadIssue();
+      } catch (e) { showToast(e.message, "error"); }
+    });
+
+    document.getElementById("update-priority").addEventListener("click", async () => {
+      const priority = document.getElementById("priority-select").value;
+      try {
+        await API.post(`/issues/${issueId}/priority`, { priority });
+        showToast("Priority updated");
+        loadIssue();
+      } catch (e) { showToast(e.message, "error"); }
+    });
+
+    document.getElementById("add-comment").addEventListener("click", async () => {
+      const comment = document.getElementById("new-comment").value.trim();
+      if (!comment) return;
+      try {
+        await API.post(`/issues/${issueId}/comments`, { comment });
+        loadIssue();
+      } catch (e) { showToast(e.message, "error"); }
+    });
+
+    document.getElementById("delete-issue").addEventListener("click", async () => {
+      if (!confirm(`Delete issue #${issue.id} "${issue.title}"? This cannot be undone.`)) return;
+      try {
+        await API.del(`/issues/${issueId}`);
+        showToast("Issue deleted");
+        window.location.href = "/issues";
+      } catch (e) { showToast(e.message, "error"); }
+    });
+  }
+
+  loadIssue();
+</script>
+{% endblock %}

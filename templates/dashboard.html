@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block extra_css %}
+<style>
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .kpi-card { background: #fff; border: 1px solid #e2e5ea; border-radius: 8px; padding: 14px; }
+  .kpi-card .value { font-size: 24px; font-weight: 700; }
+  .kpi-card .label { font-size: 12px; color: #6b7280; }
+  .insight { padding: 10px 12px; background: #eef1ff; border-left: 3px solid #2f5aff; border-radius: 4px; margin-bottom: 8px; font-size: 13px; }
+  .skeleton { background: linear-gradient(90deg,#eee 25%,#f5f5f5 50%,#eee 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite; border-radius: 6px; height: 16px; }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  @media (max-width: 900px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+{% endblock %}
+{% block content %}
+<h2>Dashboard</h2>
+<div class="kpi-grid" id="kpi-grid">
+  <div class="skeleton" style="grid-column: span 4; height:70px;"></div>
+</div>
+
+<div class="card">
+  <h3>AI Insights</h3>
+  <div id="insights-list"><div class="skeleton" style="height:14px; width:60%; margin-bottom:8px;"></div></div>
+</div>
+
+<div class="card">
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <h3>Recent Issues</h3>
+    <a href="/issues" class="btn btn-ghost btn-sm">View all</a>
+  </div>
+  <table>
+    <thead><tr><th>ID</th><th>Title</th><th>Category</th><th>Priority</th><th>Status</th><th>Created</th></tr></thead>
+    <tbody id="recent-issues-tbody"><tr><td colspan="6"><div class="skeleton"></div></td></tr></tbody>
+  </table>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+  requireAuth();
+
+  function badge(value) { return `<span class="badge badge-${value}">${value}</span>`; }
+  function kpiCard(label, value) {
+    return `<div class="kpi-card"><div class="value">${value}</div><div class="label">${label}</div></div>`;
+  }
+
+  async function loadKpis() {
+    try {
+      const res = await API.get("/analytics/overview");
+      const d = res.data;
+      document.getElementById("kpi-grid").innerHTML = [
+        kpiCard("Total Issues", d.total_issues),
+        kpiCard("Open Issues", d.open_issues),
+        kpiCard("Critical Issues", d.critical_issues),
+        kpiCard("Resolved", d.resolved_issues),
+      ].join("");
+    } catch (e) {
+      document.getElementById("kpi-grid").innerHTML = `<p style="color:#e5484d">${e.message}</p>`;
+    }
+  }
+
+  async function loadInsights() {
+    const el = document.getElementById("insights-list");
+    try {
+      const overview = await API.get("/analytics/overview");
+      const recurring = await API.get("/analytics/recurring-issues");
+      const insights = [];
+
+      if (overview.data.critical_issues > 0) {
+        insights.push(`${overview.data.critical_issues} critical issue(s) require attention.`);
+      }
+      if (overview.data.potential_high_impact_issues > 0) {
+        insights.push(`${overview.data.potential_high_impact_issues} issue(s) currently show potential high operational impact.`);
+      }
+      recurring.data.slice(0, 3).forEach(r => {
+        insights.push(`Potential recurring ${r.category} issue pattern detected for ${r.vehicle} (${r.occurrences} occurrences in ${r.window_days} days).`);
+      });
+
+      el.innerHTML = insights.length
+        ? insights.map(i => `<div class="insight">${i}</div>`).join("")
+        : "<p style='color:#9ca3af'>No notable patterns detected right now.</p>";
+    } catch (e) {
+      el.innerHTML = `<p style="color:#e5484d">${e.message}</p>`;
+    }
+  }
+
+  async function loadRecentIssues() {
+    const tbody = document.getElementById("recent-issues-tbody");
+    try {
+      const res = await API.get("/issues?per_page=8");
+      const items = res.data.items;
+      tbody.innerHTML = items.map(i => `
+        <tr>
+          <td><a href="/issues/${i.id}">#${i.id}</a></td>
+          <td>${i.title}</td>
+          <td>${i.category || "—"}</td>
+          <td>${badge(i.priority)}</td>
+          <td>${badge(i.status)}</td>
+          <td>${new Date(i.created_at).toLocaleString()}</td>
+        </tr>
+      `).join("") || "<tr><td colspan='6' style='color:#6b7280'>No issues yet.</td></tr>";
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="6" style="color:#e5484d">${e.message}</td></tr>`;
+    }
+  }
+
+  loadKpis();
+  loadInsights();
+  loadRecentIssues();
+</script>
+{% endblock %}

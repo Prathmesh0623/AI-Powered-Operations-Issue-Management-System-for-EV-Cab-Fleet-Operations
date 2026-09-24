@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Analytics{% endblock %}
+{% block extra_css %}
+<style>
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .kpi-card { background: #fff; border: 1px solid #e2e5ea; border-radius: 8px; padding: 14px; }
+  .kpi-card .value { font-size: 24px; font-weight: 700; }
+  .kpi-card .label { font-size: 12px; color: #6b7280; }
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .chart-card { background: #fff; border: 1px solid #e2e5ea; border-radius: 8px; padding: 16px; }
+  .chart-card canvas { max-height: 260px; }
+</style>
+{% endblock %}
+{% block content %}
+<h2>Analytics</h2>
+<div class="kpi-grid" id="kpi-grid"></div>
+<div class="chart-grid">
+  <div class="chart-card"><h4>Issues by Category</h4><div style="position:relative; height:260px;"><canvas id="chart-category"></canvas></div></div>
+  <div class="chart-card"><h4>Issues by Priority</h4><div style="position:relative; height:260px;"><canvas id="chart-priority"></canvas></div></div>
+  <div class="chart-card"><h4>Issues by Status</h4><div style="position:relative; height:260px;"><canvas id="chart-status"></canvas></div></div>
+  <div class="chart-card"><h4>Issues — Last 30 Days</h4><div style="position:relative; height:260px;"><canvas id="chart-trend"></canvas></div></div>
+</div>
+<div class="card" style="margin-top:16px;">
+  <h3>Recurring Issue Patterns</h3>
+  <div id="recurring-list">Loading...</div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+  requireAuth();
+
+  function kpiCard(label, value) {
+    return `<div class="kpi-card"><div class="value">${value}</div><div class="label">${label}</div></div>`;
+  }
+
+  async function loadOverview() {
+    const res = await API.get("/analytics/overview");
+    const d = res.data;
+    document.getElementById("kpi-grid").innerHTML = [
+      kpiCard("Total Issues", d.total_issues),
+      kpiCard("Open Issues", d.open_issues),
+      kpiCard("Critical Issues", d.critical_issues),
+      kpiCard("High Priority", d.high_priority_issues),
+      kpiCard("Resolved", d.resolved_issues),
+      kpiCard("Created Today", d.created_today),
+      kpiCard("Avg Resolution (hrs)", d.avg_resolution_time_hours ?? "—"),
+      kpiCard("Potential High Impact", d.potential_high_impact_issues),
+    ].join("");
+  }
+
+  function showChartError(canvasId, message) {
+    const canvas = document.getElementById(canvasId);
+    const wrapper = canvas.parentElement;
+    wrapper.innerHTML = `<p style="color:#e5484d; font-size:13px;">${message}</p>`;
+  }
+
+  async function loadBreakdown() {
+    if (typeof Chart === "undefined") {
+      ["chart-category", "chart-priority", "chart-status", "chart-trend"].forEach(id =>
+        showChartError(id, "Chart.js failed to load from the CDN. Check your internet connection or browser console for a blocked-request error.")
+      );
+      return;
+    }
+
+    let d;
+    try {
+      const res = await API.get("/analytics/issues");
+      d = res.data;
+    } catch (e) {
+      ["chart-category", "chart-priority", "chart-status", "chart-trend"].forEach(id =>
+        showChartError(id, "Could not load analytics data: " + e.message)
+      );
+      return;
+    }
+
+    try {
+      new Chart(document.getElementById("chart-category"), {
+        type: "bar",
+        data: { labels: Object.keys(d.by_category), datasets: [{ label: "Issues", data: Object.values(d.by_category), backgroundColor: "#2f5aff" }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+      });
+    } catch (e) { showChartError("chart-category", "Chart failed to render: " + e.message); }
+
+    try {
+      new Chart(document.getElementById("chart-priority"), {
+        type: "doughnut",
+        data: { labels: Object.keys(d.by_priority), datasets: [{ data: Object.values(d.by_priority), backgroundColor: ["#17c964", "#f5a524", "#f97066", "#e5484d"] } ] },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+    } catch (e) { showChartError("chart-priority", "Chart failed to render: " + e.message); }
+
+    try {
+      new Chart(document.getElementById("chart-status"), {
+        type: "bar",
+        data: { labels: Object.keys(d.by_status), datasets: [{ label: "Issues", data: Object.values(d.by_status), backgroundColor: "#6366f1" }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+      });
+    } catch (e) { showChartError("chart-status", "Chart failed to render: " + e.message); }
+
+    try {
+      new Chart(document.getElementById("chart-trend"), {
+        type: "line",
+        data: {
+          labels: d.trend_last_30_days.map(t => t.date),
+          datasets: [{ label: "Issues Created", data: d.trend_last_30_days.map(t => t.count), borderColor: "#2f5aff", fill: false }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+    } catch (e) { showChartError("chart-trend", "Chart failed to render: " + e.message); }
+  }
+
+  async function loadRecurring() {
+    const res = await API.get("/analytics/recurring-issues");
+    const el = document.getElementById("recurring-list");
+    if (!res.data.length) {
+      el.innerHTML = "<p style='color:#9ca3af'>No recurring patterns detected in the selected window.</p>";
+      return;
+    }
+    el.innerHTML = res.data.map(r => `
+      <p>Potential recurring <strong>${r.category}</strong> issue pattern detected for <strong>${r.vehicle}</strong>
+      — ${r.occurrences} occurrences in the last ${r.window_days} days.</p>
+    `).join("");
+  }
+
+  loadOverview();
+  loadBreakdown();
+  loadRecurring();
+</script>
+{% endblock %}

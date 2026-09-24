@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Hubs{% endblock %}
+{% block content %}
+<h2>Hubs</h2>
+<div id="hubs-list" class="card">Loading...</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+  requireAuth();
+  API.get("/hubs").then(res => {
+    document.getElementById("hubs-list").innerHTML = res.data.map(h => `
+      <div style="padding:10px 0; border-bottom:1px solid #e2e5ea;">
+        <strong>${h.name}</strong> — ${h.location || "—"} (Capacity: ${h.capacity}, Vehicles: ${h.vehicle_count})
+      </div>
+    `).join("") || "No hubs found.";
+  });
+</script>
+{% endblock %}

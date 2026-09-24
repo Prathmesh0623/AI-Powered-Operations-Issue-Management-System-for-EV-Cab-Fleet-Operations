@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Vehicles{% endblock %}
+{% block content %}
+<h2>Vehicles</h2>
+<div class="filters">
+  <select id="filter-status">
+    <option value="">All statuses</option>
+    <option>Available</option><option>On Ride</option><option>Charging</option>
+    <option>Maintenance</option><option>Offline</option>
+  </select>
+  <button class="btn btn-ghost" id="apply-filters">Apply</button>
+</div>
+<div class="card">
+  <table>
+    <thead><tr><th>Registration</th><th>Model</th><th>Battery</th><th>Status</th><th>Hub</th><th>Open Issues</th></tr></thead>
+    <tbody id="vehicles-tbody"></tbody>
+  </table>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+  requireAuth();
+  function statusClass(s) { return s.replace(" ", "_"); }
+  async function loadVehicles() {
+    const status = document.getElementById("filter-status").value;
+    const params = new URLSearchParams();
+    if (status) params.set("status", status);
+    const res = await API.get(`/vehicles?${params.toString()}`);
+    document.getElementById("vehicles-tbody").innerHTML = res.data.map(v => `
+      <tr>
+        <td><a href="/vehicles/${v.id}">${v.registration_number}</a></td>
+        <td>${v.model || "—"}</td>
+        <td>${v.battery_percentage}%</td>
+        <td>${v.status}</td>
+        <td>${v.hub || "—"}</td>
+        <td>${v.open_issue_count}</td>
+      </tr>
+    `).join("") || "<tr><td colspan='6' style='color:#6b7280'>No vehicles found.</td></tr>";
+  }
+  document.getElementById("apply-filters").addEventListener("click", loadVehicles);
+  loadVehicles();
+</script>
+{% endblock %}

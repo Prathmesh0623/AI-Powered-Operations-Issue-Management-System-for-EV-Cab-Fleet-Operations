@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Create Issue{% endblock %}
+{% block content %}
+<h2>Report a New Issue</h2>
+<div class="card" style="max-width:560px;">
+  <div class="form-group">
+    <label>Title</label>
+    <input type="text" id="title" placeholder="e.g. EV-102 charging failure" />
+  </div>
+  <div class="form-group">
+    <label>Description</label>
+    <textarea id="description" rows="5" placeholder="Describe what happened in detail..."></textarea>
+  </div>
+  <div class="form-group">
+    <label>Priority (optional — AI will suggest one)</label>
+    <select id="priority">
+      <option value="Medium" selected>Medium</option>
+      <option value="Low">Low</option>
+      <option value="High">High</option>
+      <option value="Critical">Critical</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label>Vehicle (optional)</label>
+    <select id="vehicle-select"><option value="">— None —</option></select>
+  </div>
+  <div class="form-group">
+    <label>Hub (optional)</label>
+    <select id="hub-select"><option value="">— None —</option></select>
+  </div>
+  <div class="form-group">
+    <label>Driver (optional)</label>
+    <select id="driver-select"><option value="">— None —</option></select>
+  </div>
+  <button class="btn btn-ghost" id="analyze-btn" type="button">Preview AI Suggestion</button>
+  <button class="btn btn-primary" id="submit-issue">Submit Issue</button>
+  <p id="form-error" style="color:#e5484d; font-size:13px; margin-top:10px;"></p>
+  <div id="ai-preview" style="display:none; margin-top:14px; padding:10px; background:#f5f6f8; border-radius:8px; font-size:13px;"></div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+  requireAuth();
+
+  async function loadOptions() {
+    try {
+      const [vehiclesRes, hubsRes, driversRes] = await Promise.all([
+        API.get("/vehicles"),
+        API.get("/hubs"),
+        API.get("/drivers"),
+      ]);
+
+      const vehicleSelect = document.getElementById("vehicle-select");
+      vehiclesRes.data.forEach(v => {
+        const opt = document.createElement("option");
+        opt.value = v.id;
+        opt.textContent = `${v.registration_number}${v.model ? " — " + v.model : ""}`;
+        vehicleSelect.appendChild(opt);
+      });
+
+      const hubSelect = document.getElementById("hub-select");
+      hubsRes.data.forEach(h => {
+        const opt = document.createElement("option");
+        opt.value = h.id;
+        opt.textContent = h.name;
+        hubSelect.appendChild(opt);
+      });
+
+      const driverSelect = document.getElementById("driver-select");
+      driversRes.data.forEach(d => {
+        const opt = document.createElement("option");
+        opt.value = d.id;
+        opt.textContent = d.name;
+        driverSelect.appendChild(opt);
+      });
+    } catch (e) {
+      showToast("Could not load vehicles/hubs/drivers: " + e.message, "error");
+    }
+  }
+  loadOptions();
+
+  document.getElementById("analyze-btn").addEventListener("click", async () => {
+    const title = document.getElementById("title").value.trim();
+    const description = document.getElementById("description").value.trim();
+    const previewEl = document.getElementById("ai-preview");
+    if (!description) { showToast("Enter a description first", "error"); return; }
+
+    previewEl.style.display = "block";
+    previewEl.textContent = "Analyzing...";
+    try {
+      const catRes = await API.post("/ai/classify", { title, description });
+      const category = catRes.data.predicted_category;
+      const priRes = await API.post("/ai/priority", { title, description, category: category || "Other" });
+      previewEl.innerHTML = `
+        <strong>Suggested Category:</strong> ${category || "—"} (${catRes.data.confidence != null ? Math.round(catRes.data.confidence*100)+"%" : "n/a"})<br/>
+        <strong>Suggested Priority:</strong> ${priRes.data.predicted_priority || "—"} (${priRes.data.confidence != null ? Math.round(priRes.data.confidence*100)+"%" : "n/a"})<br/>
+        <span style="color:#6b7280;">These are AI suggestions — the final category and priority are set when you submit, and can be changed later by a manager.</span>
+      `;
+    } catch (e) {
+      previewEl.textContent = e.message;
+    }
+  });
+
+  document.getElementById("submit-issue").addEventListener("click", async () => {
+    const title = document.getElementById("title").value.trim();
+    const description = document.getElementById("description").value.trim();
+    const priority = document.getElementById("priority").value;
+    const vehicle_id = document.getElementById("vehicle-select").value ? parseInt(document.getElementById("vehicle-select").value) : null;
+    const hub_id = document.getElementById("hub-select").value ? parseInt(document.getElementById("hub-select").value) : null;
+    const driver_id = document.getElementById("driver-select").value ? parseInt(document.getElementById("driver-select").value) : null;
+    const errorEl = document.getElementById("form-error");
+    errorEl.textContent = "";
+    try {
+      const res = await API.post("/issues", { title, description, priority, vehicle_id, hub_id, driver_id });
+      showToast("Issue created successfully");
+      window.location.href = `/issues/${res.data.id}`;
+    } catch (e) {
+      errorEl.textContent = e.message;
+    }
+  });
+</script>
+{% endblock %}

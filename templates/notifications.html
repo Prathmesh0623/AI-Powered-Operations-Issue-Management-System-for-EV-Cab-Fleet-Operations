@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Notifications{% endblock %}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center;">
+  <h2>Notifications</h2>
+  <button class="btn btn-ghost" id="mark-all-read">Mark all as read</button>
+</div>
+<div class="card" id="notif-list">Loading...</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+  requireAuth();
+  async function load() {
+    const res = await API.get("/notifications");
+    const items = res.data.items;
+    document.getElementById("notif-list").innerHTML = items.map(n => `
+      <div style="padding:10px 0; border-bottom:1px solid #e2e5ea; ${n.is_read ? 'opacity:0.6;' : ''}">
+        <strong>${n.type || 'notice'}</strong> — ${n.message}
+        <div style="font-size:11px; color:#9ca3af;">${new Date(n.created_at).toLocaleString()}</div>
+      </div>
+    `).join("") || "<p style='color:#9ca3af'>No notifications yet.</p>";
+  }
+  document.getElementById("mark-all-read").addEventListener("click", async () => {
+    await API.post("/notifications/read-all");
+    load();
+  });
+  load();
+</script>
+{% endblock %}

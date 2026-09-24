@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block content %}
+<h2>Settings</h2>
+<div class="card" style="max-width:480px;">
+  <h3>Your Profile</h3>
+  <div id="profile-info">Loading...</div>
+</div>
+<div class="card" style="max-width:480px;">
+  <h3>System</h3>
+  <p style="color:#6b7280; font-size:13px;">
+    This is a prototype system running on synthetic demo data. Category/priority
+    models can be retrained from <code>ml/training/</code> — see the ML documentation.
+  </p>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+  requireAuth();
+  API.get("/auth/me").then(res => {
+    const u = res.data;
+    document.getElementById("profile-info").innerHTML = `
+      <p><strong>Name:</strong> ${u.name}</p>
+      <p><strong>Email:</strong> ${u.email}</p>
+      <p><strong>Role:</strong> ${u.role}</p>
+      <p><strong>Team:</strong> ${u.team || "—"}</p>
+    `;
+  });
+</script>
+{% endblock %}

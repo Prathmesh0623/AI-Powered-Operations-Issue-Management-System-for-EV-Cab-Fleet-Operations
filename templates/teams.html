@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Teams{% endblock %}
+{% block content %}
+<h2>Teams</h2>
+<div class="card" id="teams-list">Loading...</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+  requireAuth();
+  API.get("/users/teams").then(res => {
+    document.getElementById("teams-list").innerHTML = res.data.map(t => `
+      <div style="padding:10px 0; border-bottom:1px solid #e2e5ea;">${t.name}</div>
+    `).join("") || "<p style='color:#9ca3af'>No teams found.</p>";
+  }).catch(e => {
+    document.getElementById("teams-list").innerHTML = `<p style="color:#e5484d">${e.message}</p>`;
+  });
+</script>
+{% endblock %}

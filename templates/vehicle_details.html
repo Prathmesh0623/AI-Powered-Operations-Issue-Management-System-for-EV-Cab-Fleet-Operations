@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Vehicle Details{% endblock %}
+{% block content %}
+<div id="vehicle-container">Loading...</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+  requireAuth();
+  const vehicleId = window.location.pathname.split("/").pop();
+  async function load() {
+    const res = await API.get(`/vehicles/${vehicleId}`);
+    const v = res.data;
+    document.getElementById("vehicle-container").innerHTML = `
+      <h2>${v.registration_number} — ${v.model || ""}</h2>
+      <div class="card">
+        <p><strong>Status:</strong> ${v.status}</p>
+        <p><strong>Battery:</strong> ${v.battery_percentage}%</p>
+        <p><strong>Hub:</strong> ${v.hub || "—"}</p>
+      </div>
+      <div class="card">
+        <h3>Recent Issues</h3>
+        ${v.recent_issues.map(i => `<p><a href="/issues/${i.id}">#${i.id} ${i.title}</a> — ${i.status}</p>`).join("") || "<p style='color:#9ca3af'>No issues recorded.</p>"}
+      </div>
+      <div class="card">
+        <h3>Maintenance History</h3>
+        ${v.maintenance_history.map(m => `<p>${m.maintenance_type} — ${m.status} (${m.technician_team || "unassigned"})</p>`).join("") || "<p style='color:#9ca3af'>No maintenance records.</p>"}
+      </div>
+    `;
+  }
+  load();
+</script>
+{% endblock %}

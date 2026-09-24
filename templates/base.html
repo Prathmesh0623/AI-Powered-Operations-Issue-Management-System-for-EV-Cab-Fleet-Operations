@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}AI Operations Management{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}" />
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-logo">AI Ops</div>
+      <nav id="sidebar-nav">
+        <a href="/dashboard" data-path="/dashboard">Dashboard</a>
+        <a href="/issues" data-path="/issues">Issues</a>
+        <a href="/vehicles" data-path="/vehicles">Vehicles</a>
+        <a href="/drivers" data-path="/drivers">Drivers</a>
+        <a href="/hubs" data-path="/hubs">Hubs</a>
+        <a href="/analytics" data-path="/analytics">Analytics</a>
+        <a href="/notifications" data-path="/notifications">Notifications</a>
+        <a href="/users" data-path="/users">Users</a>
+        <a href="/teams" data-path="/teams">Teams</a>
+        <a href="/audit-logs" data-path="/audit-logs">Audit Logs</a>
+        <a href="/settings" data-path="/settings">Settings</a>
+      </nav>
+    </aside>
+    <main class="content">
+      <header class="topbar">
+        <button id="menu-toggle" class="btn btn-ghost btn-sm mobile-only" aria-label="Toggle menu">☰</button>
+        <div style="flex:1"></div>
+        <a href="/notifications" id="notif-bell" class="btn btn-ghost btn-sm" aria-label="Notifications">🔔 <span id="unread-badge" style="display:none;"></span></a>
+        <span id="current-user"></span>
+        <button id="logout-btn" class="btn btn-ghost">Logout</button>
+      </header>
+      <div class="page-body">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+  <script src="{{ url_for('static', filename='js/api.js') }}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>
